@@ -18,12 +18,24 @@ main =
         , subscriptions = subscriptions
         }
 
-type Model
-    = Failure
-    | Loading
-    | Success (List Breed)
-    | GotImages (List String)
+type Status
+    = Loading
+    | Ready
+    | Error String
 
+type alias Model =
+    { breeds : List Breed
+    , breedCache : Maybe (List Breed)
+    , selectedBreedImages : List String
+    , breedImageCache : Dict String (List String)
+    , status : Status
+    , currentBreed : Maybe String
+    , viewState : ViewState
+    }
+
+type ViewState
+    = ViewingBreeds
+    | ViewingImages
 type alias Breed = 
     { name : String
     , subBreeds : List String
@@ -31,14 +43,29 @@ type alias Breed =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Loading, getAllBreeds )
+    ({ breeds = []
+     , breedCache = Nothing
+     , selectedBreedImages = []
+     , breedImageCache = Dict.empty
+     , status = Loading
+     , currentBreed = Nothing
+     , viewState = ViewingBreeds
+    }
+    , getAllBreeds
+    )
 
 
 type Msg
     = GotBreeds (Result Http.Error (List Breed))
     | GetBreedDetails String
-    | GotBreedDetails (Result Http.Error (List String)) 
+    | GotBreedDetails String (Result Http.Error BreedImages) 
+    | ShowBreeds
+    | CachedBreedsLoaded (List Breed)
 
+type alias BreedImages =
+    { status : String
+    , images : List String
+    }
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -46,17 +73,61 @@ update msg model =
         GotBreeds result ->
             case result of
                 Ok breeds ->
-                    ( Success breeds, Cmd.none )
+                    ( { model
+                      | breeds = breeds
+                      , breedCache = Just breeds
+                      , status = Ready
+                    }
+                    , Cmd.none )
                 Err _ ->
-                    ( Failure, Cmd.none )
+                    ( { model | status = Error "Failed to retrieve or load breeds." }
+                    , Cmd.none 
+                    )
         GetBreedDetails breed ->
-            getBreedImages breed
-        GotBreedDetails result ->
+            case Dict.get breed model.breedImageCache of
+                Just cachedImages ->
+                    ( { model 
+                      | selectedBreedImages = cachedImages
+                      , status = Ready
+                      , currentBreed = Just breed
+                      , viewState = ViewingImages
+                      }
+                    , Cmd.none
+                    )
+                Nothing -> 
+                    ( { model 
+                      | status = Loading
+                      , currentBreed = Just breed
+                      }
+                    , getBreedImages breed
+                    )
+        GotBreedDetails breed result ->
             case result of
                 Ok images ->
-                    ( GotImages images, Cmd.none )
+                    ( { model
+                      | selectedBreedImages = images.images
+                      , breedImageCache = Dict.insert breed images.images model.breedImageCache
+                      , status = Ready
+                      , viewState = ViewingImages
+                    }
+                    , Cmd.none  )
                 Err _ ->
-                    ( Failure, Cmd.none )
+                    ( { model | status = Error "Failed to retrieve or load images." }
+                    , Cmd.none 
+                    )
+        ShowBreeds ->
+            ( { model
+              | viewState = ViewingBreeds
+            }
+            , Cmd.none
+            )
+        CachedBreedsLoaded breeds ->
+            ( { model
+              | breeds = breeds
+              , status = Ready
+              }
+            , Cmd.none
+            )
 
 
 subscriptions : Model -> Sub Msg
@@ -66,17 +137,19 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    case model of
-        Failure ->
-            text "Sorry, there was an error getting the dog breeds."
+    case model.status of
+        Error message ->
+            text message
         Loading ->
             text "Loading..."
-        Success dogBreeds ->
-            div []
-                [ ul [] (List.map viewBreed dogBreeds)
-                ]
-        GotImages images ->
-            viewBreedDetails images
+        Ready ->
+            case model.viewState of
+                ViewingBreeds ->
+                    div []
+                        [ ul [] (List.map viewBreed model.breeds)
+                        ]
+                ViewingImages ->
+                    viewBreedDetails model.selectedBreedImages
 
 viewBreed : Breed -> Html Msg
 viewBreed breed =
@@ -95,30 +168,34 @@ viewSubBreed parentBreed subBreed =
 viewBreedDetails : List String -> Html Msg
 viewBreedDetails images =
     div []
-                [text (String.fromInt (List.length images) ++ " total images")
+    [ button [onClick ShowBreeds] [text "Go back"]
+    , text (String.fromInt (List.length images) ++ " total images")
     , ul [] 
         ( images
             |> List.take 20
             |> List.map (\image -> img [ src image, width 200, height 200 ] [] )
-        )]
+        )
+    ]
 
-getBreedImages : String -> (Model, Cmd Msg)
+getBreedImages : String -> Cmd Msg
 getBreedImages breed =
-    (Loading, Http.get
+    Http.get
         { url = "https://dog.ceo/api/breed/" ++ breed ++ "/images"
-        , expect = Http.expectJson GotBreedDetails breedDetailDecoder
-        })
+        , expect = Http.expectJson (GotBreedDetails breed) breedDetailDecoder
+        }
 
-breedDetailDecoder : Decoder (List String)
+breedDetailDecoder : Decoder BreedImages
 breedDetailDecoder =
-    Json.Decode.field "message" (Json.Decode.list Json.Decode.string)
+    Json.Decode.map2 BreedImages
+        (Json.Decode.field "status" Json.Decode.string)
+        (Json.Decode.field "message" (Json.Decode.list Json.Decode.string))
 
 getAllBreeds : Cmd Msg
 getAllBreeds =
-  Http.get
-    { url = "https://dog.ceo/api/breeds/list/all"
-    , expect = Http.expectJson GotBreeds breedsDecoder
-    }
+    Http.get
+        { url = "https://dog.ceo/api/breeds/list/all"
+        , expect = Http.expectJson GotBreeds breedsDecoder
+        }
 
 breedsDecoder : Decoder (List Breed)
 breedsDecoder =
