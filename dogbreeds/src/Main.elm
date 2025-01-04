@@ -8,7 +8,6 @@ import Http
 import Json.Decode exposing (Decoder)
 import Dict exposing (Dict)
 
-
 main : Program () Model Msg
 main =
     Browser.element
@@ -31,11 +30,14 @@ type alias Model =
     , status : Status
     , currentBreed : Maybe String
     , viewState : ViewState
+    , currentPage : Int
+    , imagesPerPage : Int
     }
 
 type ViewState
     = ViewingBreeds
     | ViewingImages
+
 type alias Breed = 
     { name : String
     , subBreeds : List String
@@ -43,29 +45,36 @@ type alias Breed =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ({ breeds = []
-     , breedCache = Nothing
-     , selectedBreedImages = []
-     , breedImageCache = Dict.empty
-     , status = Loading
-     , currentBreed = Nothing
-     , viewState = ViewingBreeds
-    }
+    ( { breeds = []
+      , breedCache = Nothing
+      , selectedBreedImages = []
+      , breedImageCache = Dict.empty
+      , status = Loading
+      , currentBreed = Nothing
+      , viewState = ViewingBreeds
+      , currentPage = 0
+      , imagesPerPage = 20
+      }
     , getAllBreeds
     )
-
 
 type Msg
     = GotBreeds (Result Http.Error (List Breed))
     | GetBreedDetails String
-    | GotBreedDetails String (Result Http.Error BreedImages) 
+    | GotBreedDetails String (Result Http.Error BreedImages)
     | ShowBreeds
     | CachedBreedsLoaded (List Breed)
+    | NextPage
+    | PreviousPage
 
 type alias BreedImages =
     { status : String
     , images : List String
     }
+
+getMaxPages : List String -> Int -> Int
+getMaxPages images imagesPerPage =
+    ceiling (toFloat (List.length images) / toFloat imagesPerPage) - 1
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -77,10 +86,10 @@ update msg model =
                       | breeds = breeds
                       , breedCache = Just breeds
                       , status = Ready
-                    }
+                      }
                     , Cmd.none )
                 Err _ ->
-                    ( { model | status = Error "Failed to retrieve or load breeds." }
+                    ( { model | status = Error "Failed to get breeds." }
                     , Cmd.none 
                     )
         GetBreedDetails breed ->
@@ -103,22 +112,39 @@ update msg model =
                     )
         GotBreedDetails breed result ->
             case result of
-                Ok images ->
+                Ok imagesData ->
                     ( { model
-                      | selectedBreedImages = images.images
-                      , breedImageCache = Dict.insert breed images.images model.breedImageCache
+                      | selectedBreedImages = imagesData.images
+                      , breedImageCache = Dict.insert breed imagesData.images model.breedImageCache
                       , status = Ready
                       , viewState = ViewingImages
-                    }
+                      }
                     , Cmd.none  )
                 Err _ ->
-                    ( { model | status = Error "Failed to retrieve or load images." }
+                    ( { model | status = Error "Failed to get breed images." }
                     , Cmd.none 
                     )
         ShowBreeds ->
             ( { model
               | viewState = ViewingBreeds
-            }
+              , currentPage = 0
+              }
+            , Cmd.none
+            )
+        NextPage ->
+            let
+                maxPages =
+                    getMaxPages model.selectedBreedImages model.imagesPerPage
+            in
+            ( { model
+              | currentPage = min (model.currentPage + 1) maxPages
+              }
+            , Cmd.none
+            )
+        PreviousPage ->
+            ( { model
+              | currentPage = max 0 (model.currentPage - 1)
+              }
             , Cmd.none
             )
         CachedBreedsLoaded breeds ->
@@ -129,11 +155,9 @@ update msg model =
             , Cmd.none
             )
 
-
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
-
 
 view : Model -> Html Msg
 view model =
@@ -149,33 +173,74 @@ view model =
                         [ ul [] (List.map viewBreed model.breeds)
                         ]
                 ViewingImages ->
-                    viewBreedDetails model.selectedBreedImages
+                    viewBreedDetails model
 
 viewBreed : Breed -> Html Msg
 viewBreed breed =
     if List.isEmpty breed.subBreeds then
         li [] [button [onClick (GetBreedDetails breed.name)] [text breed.name]]
-    else div []
-        [ text breed.name
-        , ul []
-            (List.map (viewSubBreed breed.name) breed.subBreeds)
-        ]
+    else 
+        div []
+            [ text breed.name
+            , ul []
+                (List.map (viewSubBreed breed.name) breed.subBreeds)
+            ]
 
 viewSubBreed : String -> String -> Html Msg
 viewSubBreed parentBreed subBreed =
     li [] [button [onClick (GetBreedDetails (parentBreed ++ "/" ++ subBreed))] [text subBreed]]
 
-viewBreedDetails : List String -> Html Msg
-viewBreedDetails images =
+viewBreedDetails : Model -> Html Msg
+viewBreedDetails model =
+    let
+        startIndex =
+            model.currentPage * model.imagesPerPage
+
+        endIndex =
+            startIndex + model.imagesPerPage
+
+        currentImages =
+            model.selectedBreedImages
+                |> List.drop startIndex
+                |> List.take model.imagesPerPage
+
+        maxPages =
+            getMaxPages model.selectedBreedImages model.imagesPerPage
+
+        paginationInfo =
+            String.fromInt (startIndex + 1)
+                ++ "-"
+                ++ String.fromInt (min endIndex (List.length model.selectedBreedImages))
+                ++ " of "
+                ++ String.fromInt (List.length model.selectedBreedImages)
+                ++ " images"
+    in
     div []
-    [ button [onClick ShowBreeds] [text "Go back"]
-    , text (String.fromInt (List.length images) ++ " total images")
-    , ul [] 
-        ( images
-            |> List.take 20
-            |> List.map (\image -> img [ src image, width 200, height 200 ] [] )
-        )
-    ]
+        [ div []
+            [ button [ onClick ShowBreeds ] [ text "Go back" ]
+            , text (" " ++ paginationInfo ++ " ")
+            ]
+        , div []
+            [ button 
+                [ onClick PreviousPage
+                , Html.Attributes.disabled (model.currentPage == 0)
+                ] 
+                [ text "Previous" ]
+            , text (" Page " ++ String.fromInt (model.currentPage + 1) ++ " of " ++ String.fromInt (maxPages + 1) ++ " ")
+            , button 
+                [ onClick NextPage
+                , Html.Attributes.disabled (model.currentPage >= maxPages)
+                ] 
+                [ text "Next" ]
+            ]
+        , div [] 
+            (List.map (\image -> 
+                img [ src image
+                    , width 200
+                    , height 200
+                    ] []
+            ) currentImages)
+        ]
 
 getBreedImages : String -> Cmd Msg
 getBreedImages breed =
