@@ -3,7 +3,7 @@ module Main exposing (main)
 import Browser
 import Html exposing (..)
 import Html.Events exposing (onClick)
-import Html.Attributes exposing (src)
+import Html.Attributes exposing (src, width, height)
 import Http
 import Json.Decode exposing (Decoder)
 import Dict exposing (Dict)
@@ -98,11 +98,11 @@ viewBreed breed =
 
 viewSubBreed : String -> Html Msg
 viewSubBreed subBreed =
-    li [] [ text subBreed ] -- needs button
+    li [] [button [onClick (GetBreedDetails subBreed)] [text subBreed]]
 
 viewBreedDetails : String -> Html Msg
 viewBreedDetails image =
-    img [ src image ] [] 
+    img [ src image, width 200, height 200 ] [] 
 
 getBreedImages : String -> (Model, Cmd Msg)
 getBreedImages breed =
