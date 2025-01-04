@@ -3,6 +3,7 @@ module Main exposing (main)
 import Browser
 import Html exposing (..)
 import Html.Events exposing (onClick)
+import Html.Attributes exposing (src)
 import Http
 import Json.Decode exposing (Decoder)
 import Dict exposing (Dict)
@@ -76,7 +77,7 @@ view model =
                 ]
         GotImages images ->
             div []
-                [ ul [] (List.map viewBreedDetails images)]
+                [ ul [] (List.map viewBreedDetails images)] -- add total count of images here
             
 
 viewBreed : Breed -> Html Msg
@@ -94,8 +95,8 @@ viewSubBreed subBreed =
     li [] [ text subBreed ] -- needs button
 
 viewBreedDetails : String -> Html Msg
-viewBreedDetails breed =
-    text breed
+viewBreedDetails image =
+    img [ src image ] [] 
 
 getBreedImages : String -> (Model, Cmd Msg)
 getBreedImages breed =
