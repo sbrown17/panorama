@@ -76,15 +76,7 @@ view model =
                 [ ul [] (List.map viewBreed dogBreeds)
                 ]
         GotImages images ->
-            div []
-                [ text (String.fromInt (List.length images) ++ " total images")
-                , ul [] 
-                    ( images
-                        |> List.take 20
-                        |> List.map viewBreedDetails
-                    )
-                ]
-            
+            viewBreedDetails images
 
 viewBreed : Breed -> Html Msg
 viewBreed breed =
@@ -93,16 +85,22 @@ viewBreed breed =
     else div []
         [ text breed.name
         , ul []
-            (List.map viewSubBreed breed.subBreeds)
+            (List.map (viewSubBreed breed.name) breed.subBreeds)
         ]
 
-viewSubBreed : String -> Html Msg
-viewSubBreed subBreed =
-    li [] [button [onClick (GetBreedDetails subBreed)] [text subBreed]]
+viewSubBreed : String -> String -> Html Msg
+viewSubBreed parentBreed subBreed =
+    li [] [button [onClick (GetBreedDetails (parentBreed ++ "/" ++ subBreed))] [text subBreed]]
 
-viewBreedDetails : String -> Html Msg
-viewBreedDetails image =
-    img [ src image, width 200, height 200 ] [] 
+viewBreedDetails : List String -> Html Msg
+viewBreedDetails images =
+    div []
+                [text (String.fromInt (List.length images) ++ " total images")
+    , ul [] 
+        ( images
+            |> List.take 20
+            |> List.map (\image -> img [ src image, width 200, height 200 ] [] )
+        )]
 
 getBreedImages : String -> (Model, Cmd Msg)
 getBreedImages breed =
