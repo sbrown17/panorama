@@ -77,7 +77,8 @@ view model =
                 ]
         GotImages images ->
             div []
-                [ ul [] 
+                [ text (String.fromInt (List.length images) ++ " total images")
+                , ul [] 
                     ( images
                         |> List.take 20
                         |> List.map viewBreedDetails
