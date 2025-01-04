@@ -1,45 +1,67 @@
 --Module organization:
--- The only thing I'd really want to expose is editPerson and submitPerson, everything else should be handled by this module and wont be needed by the user of the api
+-- The only thing I'd really want to expose is submitPerson, everything else should be handled by this module and wont be needed by the user of the api
+-- also organized it to be more relaxed on typing up front and give more strict typing after verification so it can be trusted more thoroughly when in use
 
-module PersonValidation exposing (editPerson, submitPerson)
+module PersonValidation exposing (submitPerson)
 
 type alias ProvisionalPerson =
-  { firstName : Maybe String
-  , lastName : Maybe String
-  , socialSecurity : Maybe SocialSecurity
-  , married : Maybe Bool
-  , phoneNumber : Maybe PhoneNumber
-  }
+    { firstName : Maybe String
+    , lastName : Maybe String
+    , socialSecurity : Maybe String
+    , married : Maybe Bool
+    , phoneNumber : Maybe String
+    }
 
-type alias Person =
-  { firstName : String
-  , lastName : String
-  , socialSecurity : String
-  , married : Bool
-  , phoneNumber : String
-  }
+type alias ValidatedPerson =
+    { firstName : FirstName
+    , lastName : LastName
+    , socialSecurity : SocialSecurity
+    , married : MarriageStatus
+    , phoneNumber : PhoneNumber
+    }
+
+type FirstName
+    = FirstName String
+type LastName
+    = LastName String
+
+type MarriageStatus
+    = Married
+    | Unmarried
 
 type alias SocialSecurity =
-  { areaNumber : Int
-  , groupNumber : Int
-  , serialNumber : Int
-  }
+    { areaNumber : Int
+    , groupNumber : Int
+    , serialNumber : Int
+    }
 
 type alias PhoneNumber =
-  { areaCode : Int
-  , telephonePrefix : Int
-  , lineNumber : Int
-  }
+    { areaCode : Int
+    , telephonePrefix : Int
+    , lineNumber : Int
+    }
 
-editPerson : ProvisionalPerson -> ProvisionalPerson
--- editPerson should check for a unique id (uid) and if the client is vetted, they should be allowed to make changes to the ProvisionalPerson
--- just in case they wish to come back later
+type alias ValidationResult error success
+    = ValidationFailure (List error)
+    | ValidationSuccess success
 
-submitPerson : ProvisionalPerson -> Person -> (Bool, String)
--- should return a success/failure and a message of what went right or wrong  (eg. "Information Validated and Submitted Successfully" or "Failure to validate."/"Failure to submit, please try again.")
+type alias PersonResult = 
+    ValidationResult String ValidatedPerson
 
-verifySocialSecurity : SocialSecurity -> String
+type alias PhoneNumberResult =
+    ValidationResult String String
+
+submitPerson : ProvisionalPerson -> PersonResult
+-- verifyFirstName/LastName/SocialSecurity/PhoneNumber/MarriageStatus
+
+verifyFirstName : String -> FirstName
+
+verifyLastName : String -> LastName
+
+verifySocialSecurity : String -> SocialSecurity
 -- this should be encrypted somehow to preserve user privacy
 
-verifyPhoneNumber : PhoneNumber -> String
+verifyPhoneNumber : String -> PhoneNumberResult
 -- should also probably be encrypted
+
+verifyMarriageStatus : Bool -> MarriageStatus
