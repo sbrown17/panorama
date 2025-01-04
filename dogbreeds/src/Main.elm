@@ -28,9 +28,6 @@ type alias Breed =
     , subBreeds : List String
     }
 
--- type alias Image =
---     {}
-
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( Loading, getAllBreeds )
@@ -103,7 +100,7 @@ viewBreedDetails breed =
 getBreedImages : String -> (Model, Cmd Msg)
 getBreedImages breed =
     (Loading, Http.get
-        { url = "https://dog.ceo/api/" ++ breed ++ "/list/all"
+        { url = "https://dog.ceo/api/breed/" ++ breed ++ "/images"
         , expect = Http.expectJson GotBreedDetails breedDetailDecoder
         })
 
@@ -123,8 +120,6 @@ breedsDecoder =
     Json.Decode.field "message" (Json.Decode.dict (Json.Decode.list Json.Decode.string))
         |> Json.Decode.map dictToBreeds
 
-
--- can probably get rid of the dict and custom it
 dictToBreeds : Dict String (List String) -> List Breed
 dictToBreeds dict =
     Dict.toList dict
