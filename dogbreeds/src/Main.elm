@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Html exposing (..)
+import Html.Events exposing (onClick)
 import Http
 import Json.Decode exposing (Decoder)
 import Dict exposing (Dict)
@@ -20,11 +21,15 @@ type Model
     = Failure
     | Loading
     | Success (List Breed)
+    | GotImages (List String)
 
 type alias Breed = 
     { name : String
     , subBreeds : List String
     }
+
+-- type alias Image =
+--     {}
 
 init : () -> ( Model, Cmd Msg )
 init _ =
@@ -33,7 +38,8 @@ init _ =
 
 type Msg
     = GotBreeds (Result Http.Error (List Breed))
-    -- | LookAtBreed
+    | GetBreedDetails String
+    | GotBreedDetails (Result Http.Error (List String)) 
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -43,6 +49,14 @@ update msg model =
             case result of
                 Ok breeds ->
                     ( Success breeds, Cmd.none )
+                Err _ ->
+                    ( Failure, Cmd.none )
+        GetBreedDetails breed ->
+            getBreedImages breed
+        GotBreedDetails result ->
+            case result of
+                Ok images ->
+                    ( GotImages images, Cmd.none )
                 Err _ ->
                     ( Failure, Cmd.none )
 
@@ -61,15 +75,17 @@ view model =
             text "Loading..."
         Success dogBreeds ->
             div []
-                [
-                    ul [] (List.map viewBreed dogBreeds)
+                [ ul [] (List.map viewBreed dogBreeds)
                 ]
+        GotImages images ->
+            div []
+                [ ul [] (List.map viewBreedDetails images)]
             
 
 viewBreed : Breed -> Html Msg
 viewBreed breed =
     if List.isEmpty breed.subBreeds then
-        li [] [text breed.name] -- needs button
+        li [] [button [onClick (GetBreedDetails breed.name)] [text breed.name]] -- needs button
     else div []
         [ text breed.name
         , ul []
@@ -79,6 +95,21 @@ viewBreed breed =
 viewSubBreed : String -> Html Msg
 viewSubBreed subBreed =
     li [] [ text subBreed ] -- needs button
+
+viewBreedDetails : String -> Html Msg
+viewBreedDetails breed =
+    text breed
+
+getBreedImages : String -> (Model, Cmd Msg)
+getBreedImages breed =
+    (Loading, Http.get
+        { url = "https://dog.ceo/api/" ++ breed ++ "/list/all"
+        , expect = Http.expectJson GotBreedDetails breedDetailDecoder
+        })
+
+breedDetailDecoder : Decoder (List String)
+breedDetailDecoder =
+    Json.Decode.field "message" (Json.Decode.list Json.Decode.string)
 
 getAllBreeds : Cmd Msg
 getAllBreeds =
