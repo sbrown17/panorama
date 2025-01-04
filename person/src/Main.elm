@@ -9,7 +9,6 @@ type alias ProvisionalPerson =
   , socialSecurity : Maybe SocialSecurity
   , married : Maybe Bool
   , phoneNumber : Maybe PhoneNumber
-  , uid : String
   }
 
 type alias Person =
@@ -18,7 +17,6 @@ type alias Person =
   , socialSecurity : String
   , married : Bool
   , phoneNumber : String
-  , uid : String
   }
 
 type alias SocialSecurity =
@@ -38,8 +36,7 @@ editPerson : ProvisionalPerson -> ProvisionalPerson
 -- just in case they wish to come back later
 
 submitPerson : ProvisionalPerson -> Person -> (Bool, String)
--- the uid will be passed in (or a new one generated) to make a permanent record of Person in the DB after validation, which will allow us to fetch it again in the future
--- it should return a success/failure and a message of what went right or wrong  (eg. "Information Validated and Submitted Successfully" or "Failure to validate."/"Failure to submit, please try again.")
+-- should return a success/failure and a message of what went right or wrong  (eg. "Information Validated and Submitted Successfully" or "Failure to validate."/"Failure to submit, please try again.")
 
 verifySocialSecurity : SocialSecurity -> String
 -- this should be encrypted somehow to preserve user privacy
