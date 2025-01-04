@@ -1,15 +1,7 @@
--- Type signatures for both the editable and the validated version of a Person.
+--Module organization:
+-- The only thing I'd really want to expose is editPerson and submitPerson, everything else should be handled by this module and wont be needed by the user of the api
 
--- Key function signatures involved in translating an editable version of a Person to a validated Person. Do not
--- worry about implementing these.
-
-  -- If there are any validations that cannot be represented in types then please do include a few code
-  -- comments discussing those.
-
--- Briefly describe the Module organization for these types and what should be exposed and what should be
--- hidden. Be ready to discuss how this impacts total system maintainability.
-
-module PersonValidation exposing (submitPerson)
+module PersonValidation exposing (editPerson, submitPerson)
 
 type alias ProvisionalPerson =
   { firstName : Maybe String
@@ -17,14 +9,16 @@ type alias ProvisionalPerson =
   , socialSecurity : Maybe SocialSecurity
   , married : Maybe Bool
   , phoneNumber : Maybe PhoneNumber
+  , uid : String
   }
 
 type alias Person =
   { firstName : String
   , lastName : String
-  , sSN : String
+  , socialSecurity : String
   , married : Bool
   , phoneNumber : String
+  , uid : String
   }
 
 type alias SocialSecurity =
@@ -39,6 +33,16 @@ type alias PhoneNumber =
   , lineNumber : Int
   }
 
+editPerson : ProvisionalPerson -> ProvisionalPerson
+-- editPerson should check for a unique id (uid) and if the client is vetted, they should be allowed to make changes to the ProvisionalPerson
+-- just in case they wish to come back later
 
-submitPerson : ProvisionalPerson -> Person
--- 
+submitPerson : ProvisionalPerson -> Person -> (Bool, String)
+-- the uid will be passed in (or a new one generated) to make a permanent record of Person in the DB after validation, which will allow us to fetch it again in the future
+-- it should return a success/failure and a message of what went right or wrong  (eg. "Information Validated and Submitted Successfully" or "Failure to validate."/"Failure to submit, please try again.")
+
+verifySocialSecurity : SocialSecurity -> String
+-- this should be encrypted somehow to preserve user privacy
+
+verifyPhoneNumber : PhoneNumber -> String
+-- should also probably be encrypted
