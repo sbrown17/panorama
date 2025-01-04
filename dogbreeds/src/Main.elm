@@ -77,13 +77,18 @@ view model =
                 ]
         GotImages images ->
             div []
-                [ ul [] (List.map viewBreedDetails images)] -- add total count of images here
+                [ ul [] 
+                    ( images
+                        |> List.take 20
+                        |> List.map viewBreedDetails
+                    )
+                ]
             
 
 viewBreed : Breed -> Html Msg
 viewBreed breed =
     if List.isEmpty breed.subBreeds then
-        li [] [button [onClick (GetBreedDetails breed.name)] [text breed.name]] -- needs button
+        li [] [button [onClick (GetBreedDetails breed.name)] [text breed.name]]
     else div []
         [ text breed.name
         , ul []
