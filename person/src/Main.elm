@@ -67,7 +67,10 @@ type alias PersonResult =
     ValidationResult String ValidatedPerson
 
 type alias PhoneNumberResult =
-    ValidationResult String String
+    ValidationResult String PhoneNumber
+
+type alias SocialSecurityResult =
+    ValidationResult String SocialSecurity
 
 submitPerson : ProvisionalPerson -> PersonResult
 -- verifyFirstName/LastName/SocialSecurity/PhoneNumber/MarriageStatus
@@ -76,7 +79,7 @@ verifyFirstName : String -> FirstName
 
 verifyLastName : String -> LastName
 
-verifySocialSecurity : String -> SocialSecurity
+verifySocialSecurity : String -> SocialSecurityResult
 -- this should be encrypted somehow to preserve user privacy
 
 verifyPhoneNumber : String -> PhoneNumberResult
