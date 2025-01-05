@@ -30,16 +30,34 @@ type MarriageStatus
     | Unmarried
 
 type alias SocialSecurity =
-    { areaNumber : Int
-    , groupNumber : Int
-    , serialNumber : Int
+    { areaNumber : AreaNumber
+    , groupNumber : GroupNumber
+    , serialNumber : SerialNumber
     }
 
+type AreaNumber
+    = AreaNumber String
+
+type GroupNumber
+    = GroupNumber String
+
+type SerialNumber
+    = SerialNumber String
+
 type alias PhoneNumber =
-    { areaCode : Int
-    , telephonePrefix : Int
-    , lineNumber : Int
+    { areaCode : AreaCode
+    , telephonePrefix : TelephonePrefix
+    , lineNumber : LineNumber
     }
+
+type AreaCode
+    = AreaCode String
+
+type TelephonePrefix
+    = TelephonePrefix String
+
+type LineNumber
+    = LineNumber String
 
 type alias ValidationResult error success
     = ValidationFailure (List error)
